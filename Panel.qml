@@ -55,7 +55,7 @@ Panel {
   property color border: Color.popups.border
   property color accent: Color.accent
   property color urgent: Color.urgent
-  property color dim: Util.alpha(Color.popups.text, 0.70)
+  property color dim: Util.alpha(Color.popups.text, 0.55)
   property color faint: Util.alpha(Color.popups.text, 0.08)
   property color cardBg: Util.alpha(Color.popups.text, 0.03)
   property color cardBorder: Util.alpha(Color.popups.border, 0.25)
