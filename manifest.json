@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "user.ethiopian-calendar",
+  "name": "Ethiopian Calendar & Fidel Suite",
+  "version": "1.2.0",
+  "author": "yaredow",
+  "license": "MIT",
+  "description": "Authentic 13-month Ethiopian Year Poster Calendar featuring Ge'ez numerals, bidirectional Gregorian converter, Orthodox holidays & daily saints, 12-hour sunrise clock, curated cultural facts, and an interactive Amharic Fidel chart.",
+  "homepage": "https://github.com/yaredow/omarchy-ethiopian-calendar",
+  "repository": "https://github.com/yaredow/omarchy-ethiopian-calendar",
+  "keywords": [
+    "calendar",
+    "ethiopian",
+    "amharic",
+    "geez",
+    "fidel",
+    "converter",
+    "habesha",
+    "clock",
+    "time"
+  ],
+  "kinds": [
+    "bar-widget",
+    "panel"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Ethiopian Calendar",
+    "description": "13-Month Ethiopian Calendar, Date Converter & Fidel Chart",
+    "category": "Time & Culture",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}
