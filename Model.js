@@ -5,14 +5,31 @@ const amharicMonths = [
   "መጋቢት", "ሚያዝያ", "ግንቦት", "ሰኔ", "ሐምሌ", "ነሐሴ", "ጳጉሜን"
 ];
 
+const amharicMonthsEn = [
+  "Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yakatit",
+  "Magabit", "Miyazya", "Ginbot", "Sene", "Hamle", "Nehase", "Pagumē"
+];
+
 const amharicDays = [
   "እሑድ", "ሰኞ", "ማክሰኞ", "ረቡዕ", "ሐሙስ", "ዓርብ", "ቅዳሜ"
+];
+
+const amharicDaysEn = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 ];
 
 const gregorianMonths = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
+
+function getEvangelist(year) {
+  var rem = ((year % 4) + 4) % 4;
+  if (rem === 0) return "ዘመነ ማቴዎስ (Matthew)";
+  if (rem === 1) return "ዘመነ ማርቆስ (Mark)";
+  if (rem === 2) return "ዘመነ ሉቃስ (Luke)";
+  return "ዘመነ ዮሐንስ (John · Leap)";
+}
 
 // Daily Saint / Tabot Commemorations (የዕለቱ ታቦት / ቅዱሳን መታሰቢያ 1-30)
 const dailySaints = {

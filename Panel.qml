@@ -55,12 +55,12 @@ Panel {
   property color border: Color.popups.border
   property color accent: Color.accent
   property color urgent: Color.urgent
-  property color dim: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.58)
-  property color faint: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.10)
-  property color cardBg: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.03)
-  property color cardBorder: Qt.rgba(border.r, border.g, border.b, 0.22)
-  property color hoverBg: Qt.rgba(foreground.r, foreground.g, foreground.b, 0.08)
-  property color activeBg: Qt.rgba(accent.r, accent.g, accent.b, 0.16)
+  property color dim: Util.alpha(Color.popups.text, 0.70)
+  property color faint: Util.alpha(Color.popups.text, 0.08)
+  property color cardBg: Util.alpha(Color.popups.text, 0.03)
+  property color cardBorder: Util.alpha(Color.popups.border, 0.25)
+  property color hoverBg: Util.alpha(Color.popups.text, 0.08)
+  property color activeBg: Util.alpha(Color.accent, 0.16)
 
   Process { id: notifyProc }
 
@@ -98,6 +98,64 @@ Panel {
   function nextFact() { factIndex = (factIndex + 1) % Model.ethiopianFacts.length }
   function prevFact() { factIndex = (factIndex - 1 + Model.ethiopianFacts.length) % Model.ethiopianFacts.length }
   function formatNum(num) { return useGeezNumerals ? Model.toAmharicNumeral(num) : String(num) }
+
+  function addConvDays(delta) {
+    if (convMode === 0) {
+      var d = new Date(convGYear, convGMonth - 1, convGDay + delta, 12, 0, 0);
+      convGYear = d.getFullYear();
+      convGMonth = d.getMonth() + 1;
+      convGDay = d.getDate();
+    } else {
+      var g = Model.ethiopianToGregorian(convEYear, convEMonth, convEDay);
+      g.setDate(g.getDate() + delta);
+      var eth = Model.getEthiopianDate(g);
+      convEYear = eth.year;
+      convEMonth = eth.month;
+      convEDay = eth.day;
+    }
+  }
+
+  function addConvMonths(delta) {
+    if (convMode === 0) {
+      var targetM = convGMonth - 1 + delta;
+      var d = new Date(convGYear, targetM, Math.min(convGDay, 28), 12, 0, 0);
+      convGYear = d.getFullYear();
+      convGMonth = d.getMonth() + 1;
+    } else {
+      var newM = convEMonth + delta;
+      var newY = convEYear;
+      while (newM > 13) { newM -= 13; newY += 1; }
+      while (newM < 1) { newM += 13; newY -= 1; }
+      convEYear = newY;
+      convEMonth = newM;
+      var maxD = (newM === 13) ? (newY % 4 === 3 ? 6 : 5) : 30;
+      if (convEDay > maxD) convEDay = maxD;
+    }
+  }
+
+  function addConvYears(delta) {
+    if (convMode === 0) {
+      convGYear += delta;
+    } else {
+      convEYear += delta;
+      var maxD = (convEMonth === 13) ? (convEYear % 4 === 3 ? 6 : 5) : 30;
+      if (convEDay > maxD) convEDay = maxD;
+    }
+  }
+
+  function toggleConvMode() {
+    if (convMode === 0) {
+      convEYear = convEthResult.year
+      convEMonth = convEthResult.month
+      convEDay = convEthResult.day
+      convMode = 1
+    } else {
+      convGYear = convGregResult.getFullYear()
+      convGMonth = convGregResult.getMonth() + 1
+      convGDay = convGregResult.getDate()
+      convMode = 0
+    }
+  }
 
   function copySelectedDate() {
     var fullStr = Model.amharicMonths[selectedMonth - 1] + " " + formatNum(selectedDay) + " ቀን " + formatNum(viewYear) + " ዓ.ም (" + selectedGregorianDate.toLocaleDateString(Qt.locale("en_US"), "MMMM d, yyyy") + ")"
@@ -173,7 +231,7 @@ Panel {
       spacing: Style.space(8)
 
       // =====================================================================
-      // UNIFIED HEADER: Tabs + Controls (Native Omarchy Controls)
+      // UNIFIED HEADER: Tabs + Live Time (Center) + Controls
       // =====================================================================
       RowLayout {
         Layout.fillWidth: true
@@ -216,6 +274,18 @@ Panel {
 
         Item { Layout.fillWidth: true }
 
+        // Live Ethiopian Time in the Center of Header
+        Text {
+          text: root.ethTime.formatted
+          font.pixelSize: Style.font.body
+          font.bold: true
+          color: root.foreground
+          textFormat: Text.PlainText
+          Layout.alignment: Qt.AlignCenter
+        }
+
+        Item { Layout.fillWidth: true }
+
         // Calendar Controls (visible only on calendar tab)
         RowLayout {
           visible: root.currentTab === 0
@@ -236,7 +306,7 @@ Panel {
           // Year Navigation - Previous (<>)
           Button {
             text: "‹"
-            fontSize: 16
+            fontSize: Style.font.heading
             foreground: root.foreground
             accent: root.accent
             Layout.alignment: Qt.AlignVCenter
@@ -244,7 +314,7 @@ Panel {
           }
 
           Text {
-            text: "🇪🇹 " + root.formatNum(root.viewYear) + " ዓ.ም"
+            text: root.formatNum(root.viewYear) + " ዓ.ም"
             font.pixelSize: Style.font.body
             font.bold: true
             color: root.foreground
@@ -254,7 +324,7 @@ Panel {
 
           Text {
             text: "(" + (root.viewYear + 7) + "–" + (root.viewYear + 8) + ")"
-            font.pixelSize: 9
+            font.pixelSize: Style.font.caption
             color: root.dim
             textFormat: Text.PlainText
             Layout.alignment: Qt.AlignVCenter
@@ -263,7 +333,7 @@ Panel {
           // Year Navigation - Next (<>)
           Button {
             text: "›"
-            fontSize: 16
+            fontSize: Style.font.heading
             foreground: root.foreground
             accent: root.accent
             Layout.alignment: Qt.AlignVCenter
@@ -295,58 +365,61 @@ Panel {
         implicitHeight: Style.space(522)
         spacing: Style.space(6)
 
-        // 4x4 Year Poster Grid
+        // 4x4 Grid Container (Months 1-12, Pagume, Dashboard)
         GridLayout {
+          id: calGrid
           columns: 4
           columnSpacing: Style.space(6)
           rowSpacing: Style.space(6)
           Layout.fillWidth: true
+          Layout.fillHeight: true
 
-          // Months 1–12
+          // Regular Months 1-12 (Rows 1-3, all 4 columns)
           Repeater {
             model: 12
             delegate: Rectangle {
               id: monthCard
-              Layout.preferredWidth: Style.space(180)
+              readonly property var mData: root.yearMonths[index]
+              Layout.fillWidth: true
               Layout.preferredHeight: Style.space(126)
               radius: Style.space(5)
               color: root.cardBg
               border.color: (root.isCurrentYear && root.ethDate.month === (index + 1)) ? root.accent : root.cardBorder
               border.width: 1
 
-              readonly property var mData: root.yearMonths[index]
-
               ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: Style.space(5)
-                spacing: Style.space(1)
+                anchors.margins: Style.space(6)
+                spacing: Style.space(2)
 
+                // Month Header: Amharic Name + English
                 RowLayout {
                   Layout.fillWidth: true
                   Text {
-                    text: root.formatNum(index + 1) + ". " + monthCard.mData.nameAm
-                    font.pixelSize: 11
+                    text: monthCard.mData ? (root.formatNum(index + 1) + ". " + monthCard.mData.nameAm) : ""
+                    font.pixelSize: Style.font.body
                     font.bold: true
                     color: (root.isCurrentYear && root.ethDate.month === (index + 1)) ? root.accent : root.foreground
                     textFormat: Text.PlainText
                   }
                   Item { Layout.fillWidth: true }
                   Text {
-                    text: monthCard.mData.gregorianSpan
-                    font.pixelSize: 8
+                    text: monthCard.mData ? monthCard.mData.gregorianSpan : ""
+                    font.pixelSize: Style.font.caption
                     color: root.dim
                     textFormat: Text.PlainText
                   }
                 }
 
+                // 7-day abbreviation headers (ሰ ማ ረ ሐ ዓ ቅ እ)
                 RowLayout {
                   Layout.fillWidth: true
-                  spacing: 0
+                  spacing: Style.space(1)
                   Repeater {
-                    model: Model.amharicDays
+                    model: Model.amharicDaysShort
                     delegate: Text {
-                      text: modelData.substring(0, 1)
-                      font.pixelSize: 8
+                      text: modelData
+                      font.pixelSize: Style.font.caption
                       font.bold: true
                       color: root.dim
                       textFormat: Text.PlainText
@@ -356,12 +429,14 @@ Panel {
                   }
                 }
 
+                // Days Grid (6-row x 7-column calendar cells)
                 GridLayout {
                   columns: 7
                   columnSpacing: Style.space(1)
                   rowSpacing: Style.space(1)
                   Layout.fillWidth: true
 
+                  // Padding cells
                   Repeater {
                     model: monthCard.mData.padding
                     delegate: Item {
@@ -370,15 +445,16 @@ Panel {
                     }
                   }
 
+                  // Day Number Cells (1 to 30)
                   Repeater {
                     model: monthCard.mData.days
                     delegate: Rectangle {
                       Layout.fillWidth: true
                       Layout.preferredHeight: Style.space(14)
                       radius: Style.space(3)
-                      readonly property bool isToday: root.isCurrentYear && (monthCard.mData.monthIndex === root.ethDate.month) && (modelData === root.ethDate.day)
-                      readonly property bool isHoliday: Model.getHoliday(monthCard.mData.monthIndex, modelData, root.viewYear % 4 === 3) !== null
-                      readonly property bool isSelected: (root.selectedMonth === monthCard.mData.monthIndex) && (root.selectedDay === modelData)
+                      readonly property bool isToday: root.isCurrentYear && (root.ethDate.month === (index + 1)) && (modelData === root.ethDate.day)
+                      readonly property bool isHoliday: Model.getHoliday(index + 1, modelData, root.viewYear % 4 === 3) !== null
+                      readonly property bool isSelected: (root.selectedMonth === (index + 1)) && (root.selectedDay === modelData)
                       color: isToday ? root.activeBg : (isSelected ? root.hoverBg : (dMouse.containsMouse ? root.faint : "transparent"))
                       border.color: isToday ? root.accent : (isSelected ? root.cardBorder : "transparent")
                       border.width: (isToday || isSelected) ? 1 : 0
@@ -396,11 +472,11 @@ Panel {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                          root.selectedMonth = monthCard.mData.monthIndex
+                          root.selectedMonth = index + 1
                           root.selectedDay = modelData
                         }
                         onDoubleClicked: {
-                          root.selectedMonth = monthCard.mData.monthIndex
+                          root.selectedMonth = index + 1
                           root.selectedDay = modelData
                           root.copySelectedDate()
                         }
@@ -408,39 +484,40 @@ Panel {
                     }
                   }
                 }
+                Item { Layout.fillHeight: true }
               }
             }
           }
 
-          // Month 13: ጳጉሜን
+          // Row 4 Slot 1: Pagume (Month 13 — The 13th Month with 5 or 6 days)
           Rectangle {
             id: pagumeCard
-            Layout.preferredWidth: Style.space(180)
+            readonly property var mData: root.yearMonths[12]
+            Layout.fillWidth: true
             Layout.preferredHeight: Style.space(126)
             radius: Style.space(5)
             color: root.cardBg
             border.color: (root.isCurrentYear && root.ethDate.month === 13) ? root.accent : root.cardBorder
             border.width: 1
-            readonly property var mData: root.yearMonths[12]
 
             ColumnLayout {
               anchors.fill: parent
-              anchors.margins: Style.space(5)
-              spacing: Style.space(1)
+              anchors.margins: Style.space(6)
+              spacing: Style.space(2)
 
               RowLayout {
                 Layout.fillWidth: true
                 Text {
-                  text: root.formatNum(13) + ". ጳጉሜን (Pagumē)"
-                  font.pixelSize: 11
+                  text: pagumeCard.mData ? (root.formatNum(13) + ". " + pagumeCard.mData.nameAm) : ""
+                  font.pixelSize: Style.font.body
                   font.bold: true
                   color: (root.isCurrentYear && root.ethDate.month === 13) ? root.accent : root.foreground
                   textFormat: Text.PlainText
                 }
                 Item { Layout.fillWidth: true }
                 Text {
-                  text: pagumeCard.mData.gregorianSpan
-                  font.pixelSize: 8
+                  text: pagumeCard.mData ? (pagumeCard.mData.daysCount + " ቀናት") : ""
+                  font.pixelSize: Style.font.caption
                   color: root.dim
                   textFormat: Text.PlainText
                 }
@@ -448,12 +525,12 @@ Panel {
 
               RowLayout {
                 Layout.fillWidth: true
-                spacing: 0
+                spacing: Style.space(1)
                 Repeater {
-                  model: Model.amharicDays
+                  model: Model.amharicDaysShort
                   delegate: Text {
-                    text: modelData.substring(0, 1)
-                    font.pixelSize: 8
+                    text: modelData
+                    font.pixelSize: Style.font.caption
                     font.bold: true
                     color: root.dim
                     textFormat: Text.PlainText
@@ -462,7 +539,6 @@ Panel {
                   }
                 }
               }
-
               GridLayout {
                 columns: 7
                 columnSpacing: Style.space(1)
@@ -519,7 +595,7 @@ Panel {
             }
           }
 
-          // Row 4 Slots 2-4: Dashboard (Slot 2 = Date Details, Slots 3 & 4 = Facts Section)
+          // Row 4 Slots 2-4: Dashboard (Slot 2 = Date & Holiday Details, Slots 3 & 4 = Facts Section)
           Rectangle {
             Layout.columnSpan: 3
             Layout.fillWidth: true
@@ -534,58 +610,66 @@ Panel {
               anchors.margins: Style.space(8)
               spacing: Style.space(8)
 
-              // Column 2: Date Details (Exact 1 Column width matching Grid above: 180 - margin = 172px)
+              // Column 2: Date & Holiday Details (Spacious & Clean)
               ColumnLayout {
                 Layout.preferredWidth: Style.space(172)
                 Layout.minimumWidth: Style.space(172)
                 Layout.maximumWidth: Style.space(172)
                 Layout.fillWidth: false
                 Layout.fillHeight: true
-                spacing: Style.space(2)
+                spacing: Style.space(4)
 
                 Text {
                   text: "📅 " + Model.amharicMonths[root.selectedMonth - 1] + " " + root.formatNum(root.selectedDay) + (root.useGeezNumerals ? " (" + root.selectedDay + ")" : "")
-                  font.pixelSize: 12
+                  font.pixelSize: Style.font.body
                   font.bold: true
                   color: root.foreground
                   textFormat: Text.PlainText
                   elide: Text.ElideRight
                   Layout.fillWidth: true
                 }
+
                 Text {
                   text: root.selectedGregorianDate.toLocaleDateString(Qt.locale("en_US"), "MMMM d, yyyy")
-                  font.pixelSize: 9
+                  font.pixelSize: Style.font.caption
                   color: root.dim
                   textFormat: Text.PlainText
                   elide: Text.ElideRight
                   Layout.fillWidth: true
                 }
+
                 Text {
-                  text: root.selectedSaint ? "⛪ " + root.selectedSaint : ""
-                  font.pixelSize: 9
+                  visible: root.selectedSaint !== ""
+                  text: "⛪ " + root.selectedSaint
+                  font.pixelSize: Style.font.caption
                   font.bold: true
                   color: root.accent
                   textFormat: Text.PlainText
-                  elide: Text.ElideRight
+                  wrapMode: Text.WordWrap
                   Layout.fillWidth: true
                 }
+
                 Text {
-                  text: root.selectedHoliday ? "🌟 " + root.selectedHoliday : ""
-                  font.pixelSize: 9
+                  visible: root.selectedHoliday !== ""
+                  text: "🌟 " + root.selectedHoliday
+                  font.pixelSize: Style.font.caption
                   font.bold: true
                   color: root.urgent
                   textFormat: Text.PlainText
-                  elide: Text.ElideRight
+                  wrapMode: Text.WordWrap
                   Layout.fillWidth: true
                 }
-                Item { Layout.fillHeight: true }
+
                 Text {
-                  text: "⏰ " + root.ethTime.formatted
-                  font.pixelSize: 9
-                  color: root.foreground
+                  visible: !root.selectedHoliday && !root.selectedSaint
+                  text: "መደበኛ ቀን (Regular Day)"
+                  font.pixelSize: Style.font.caption
+                  color: root.dim
                   textFormat: Text.PlainText
-                  font.bold: true
+                  Layout.fillWidth: true
                 }
+
+                Item { Layout.fillHeight: true }
               }
 
               // Divider between Column 2 and Column 3 (aligned with the grid above)
@@ -674,7 +758,7 @@ Panel {
       }
 
       // =====================================================================
-      // TAB 1: CONVERTER VIEW (Minimalist & Typable Bi-directional Calculator)
+      // TAB 1: CONVERTER VIEW (Clean, Big & Focused Date Calculator)
       // =====================================================================
       ColumnLayout {
         id: converterTab
@@ -683,78 +767,52 @@ Panel {
         Layout.fillHeight: true
         Layout.preferredHeight: Style.space(522)
         implicitHeight: Style.space(522)
-        spacing: Style.space(8)
+        spacing: Style.space(12)
 
         // 1. Direction Switcher & Today Shortcut
-        RowLayout {
+        Item {
           Layout.fillWidth: true
-          spacing: Style.space(8)
+          Layout.preferredHeight: Style.space(34)
 
           Row {
+            anchors.centerIn: parent
             spacing: Style.spacing.xs
-            Layout.alignment: Qt.AlignVCenter
 
             Button {
-              text: "🌍 ፈረንጅ (Gregorian) ➔ 🇪🇹 ኢትዮጵያ"
-              selected: root.convMode === 0
+              text: root.convMode === 0 ? "Gregorian" : "Ethiopian"
+              selected: true
               fontSize: Style.font.caption
               foreground: root.foreground
               accent: root.accent
-              onClicked: {
-                if (root.convMode !== 0) {
-                  root.convGYear = root.convGregResult.getFullYear()
-                  root.convGMonth = root.convGregResult.getMonth() + 1
-                  root.convGDay = root.convGregResult.getDate()
-                  root.convMode = 0
-                }
-              }
+              onClicked: root.toggleConvMode()
             }
 
             Button {
               text: "⇄"
-              fontSize: 15
+              fontSize: Style.font.title
               foreground: root.foreground
               accent: root.accent
-              onClicked: {
-                if (root.convMode === 0) {
-                  root.convEYear = root.convEthResult.year
-                  root.convEMonth = root.convEthResult.month
-                  root.convEDay = root.convEthResult.day
-                  root.convMode = 1
-                } else {
-                  root.convGYear = root.convGregResult.getFullYear()
-                  root.convGMonth = root.convGregResult.getMonth() + 1
-                  root.convGDay = root.convGregResult.getDate()
-                  root.convMode = 0
-                }
-              }
+              onClicked: root.toggleConvMode()
             }
 
             Button {
-              text: "🇪🇹 ኢትዮጵያ ➔ 🌍 ፈረንጅ (Gregorian)"
-              selected: root.convMode === 1
+              text: root.convMode === 0 ? "Ethiopian" : "Gregorian"
+              selected: false
               fontSize: Style.font.caption
               foreground: root.foreground
               accent: root.accent
-              onClicked: {
-                if (root.convMode !== 1) {
-                  root.convEYear = root.convEthResult.year
-                  root.convEMonth = root.convEthResult.month
-                  root.convEDay = root.convEthResult.day
-                  root.convMode = 1
-                }
-              }
+              onClicked: root.toggleConvMode()
             }
           }
 
-          Item { Layout.fillWidth: true }
-
           Button {
-            text: "⚡ ዛሬ (Today)"
+            id: todayBtn
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: "ዛሬ (Today)"
             fontSize: Style.font.caption
             foreground: root.foreground
             accent: root.accent
-            Layout.alignment: Qt.AlignVCenter
             onClicked: {
               root.refresh()
               root.convGYear = root.currentDate.getFullYear()
@@ -767,15 +825,16 @@ Panel {
           }
         }
 
-        // 2. Typable Interactive Input Cards
+        // 2. Interactive Typable Stepper Input Cards
         RowLayout {
           Layout.fillWidth: true
+          Layout.preferredHeight: Style.space(110)
           spacing: Style.space(8)
 
           // ---- Year Input Card
           Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: Style.space(86)
+            Layout.fillHeight: true
             radius: Style.cornerRadius
             color: root.cardBg
             border.color: yearInput.activeFocus ? root.accent : root.cardBorder
@@ -784,12 +843,13 @@ Panel {
             ColumnLayout {
               anchors.fill: parent
               anchors.margins: Style.space(8)
-              spacing: Style.space(4)
+              spacing: Style.space(2)
 
               Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: root.convMode === 0 ? "Year / ዓመት (e.g. 2026)" : "ዓመት / Year (e.g. 2018)"
-                font.pixelSize: 8
+                text: root.convMode === 0 ? "Gregorian Year (ዓመት)" : "የኢትዮጵያ ዓመት (Year)"
+                font.pixelSize: Style.font.caption
+                font.bold: true
                 color: root.dim
                 textFormat: Text.PlainText
               }
@@ -800,21 +860,18 @@ Panel {
 
                 Button {
                   text: "−"
-                  fontSize: 14
+                  fontSize: Style.font.heading
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
-                  onClicked: {
-                    if (root.convMode === 0) root.convGYear -= 1
-                    else root.convEYear -= 1
-                  }
+                  onClicked: root.addConvYears(-1)
                 }
 
                 TextInput {
                   id: yearInput
                   Layout.fillWidth: true
                   text: String(root.convMode === 0 ? root.convGYear : root.convEYear)
-                  font.pixelSize: 18
+                  font.pixelSize: Style.font.display
                   font.bold: true
                   color: root.foreground
                   horizontalAlignment: TextInput.AlignHCenter
@@ -832,15 +889,21 @@ Panel {
 
                 Button {
                   text: "+"
-                  fontSize: 14
+                  fontSize: Style.font.heading
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
-                  onClicked: {
-                    if (root.convMode === 0) root.convGYear += 1
-                    else root.convEYear += 1
-                  }
+                  onClicked: root.addConvYears(1)
                 }
+              }
+
+              Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: root.convMode === 0 ? "እ.ኤ.አ (G.C.)" : (Model.toAmharicNumeral(root.convEYear) + " ዓ.ም")
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                color: root.dim
+                textFormat: Text.PlainText
               }
             }
           }
@@ -848,7 +911,7 @@ Panel {
           // ---- Month Input Card
           Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: Style.space(86)
+            Layout.fillHeight: true
             radius: Style.cornerRadius
             color: root.cardBg
             border.color: monthInput.activeFocus ? root.accent : root.cardBorder
@@ -857,12 +920,13 @@ Panel {
             ColumnLayout {
               anchors.fill: parent
               anchors.margins: Style.space(8)
-              spacing: Style.space(4)
+              spacing: Style.space(2)
 
               Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: root.convMode === 0 ? "Month / ወር (1–12)" : "ወር / Month (1–13)"
-                font.pixelSize: 8
+                text: root.convMode === 0 ? "Gregorian Month (ወር)" : "የኢትዮጵያ ወር (Month)"
+                font.pixelSize: Style.font.caption
+                font.bold: true
                 color: root.dim
                 textFormat: Text.PlainText
               }
@@ -871,76 +935,56 @@ Panel {
                 Layout.fillWidth: true
                 spacing: Style.space(4)
 
-                // (<>) Month Previous Button
                 Button {
                   text: "‹"
-                  fontSize: 16
+                  fontSize: Style.font.heading
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
-                  onClicked: {
-                    if (root.convMode === 0) {
-                      root.convGMonth = root.convGMonth > 1 ? root.convGMonth - 1 : 12
-                    } else {
-                      root.convEMonth = root.convEMonth > 1 ? root.convEMonth - 1 : 13
-                      if (root.convEMonth === 13 && root.convEDay > 6) root.convEDay = 5
-                    }
-                  }
+                  onClicked: root.addConvMonths(-1)
                 }
 
-                ColumnLayout {
+                TextInput {
+                  id: monthInput
                   Layout.fillWidth: true
-                  spacing: 0
-
-                  TextInput {
-                    id: monthInput
-                    Layout.fillWidth: true
-                    text: String(root.convMode === 0 ? root.convGMonth : root.convEMonth)
-                    font.pixelSize: 18
-                    font.bold: true
-                    color: root.foreground
-                    horizontalAlignment: TextInput.AlignHCenter
-                    selectByMouse: true
-                    validator: IntValidator { bottom: 1; top: root.convMode === 0 ? 12 : 13 }
-                    onTextEdited: {
-                      var maxM = root.convMode === 0 ? 12 : 13
-                      var val = parseInt(text)
-                      if (!isNaN(val) && val >= 1 && val <= maxM) {
-                        if (root.convMode === 0) root.convGMonth = val
-                        else {
-                          root.convEMonth = val
-                          if (root.convEMonth === 13 && root.convEDay > 6) root.convEDay = 5
-                        }
+                  text: String(root.convMode === 0 ? root.convGMonth : root.convEMonth)
+                  font.pixelSize: Style.font.display
+                  font.bold: true
+                  color: root.foreground
+                  horizontalAlignment: TextInput.AlignHCenter
+                  verticalAlignment: TextInput.AlignVCenter
+                  selectByMouse: true
+                  validator: IntValidator { bottom: 1; top: root.convMode === 0 ? 12 : 13 }
+                  onTextEdited: {
+                    var maxM = root.convMode === 0 ? 12 : 13
+                    var val = parseInt(text)
+                    if (!isNaN(val) && val >= 1 && val <= maxM) {
+                      if (root.convMode === 0) root.convGMonth = val
+                      else {
+                        root.convEMonth = val
+                        if (root.convEMonth === 13 && root.convEDay > 6) root.convEDay = 5
                       }
                     }
                   }
-
-                  Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: root.convMode === 0 ? Model.gregorianMonths[root.convGMonth - 1] : Model.amharicMonths[root.convEMonth - 1]
-                    font.pixelSize: 9
-                    font.bold: true
-                    color: root.accent
-                    textFormat: Text.PlainText
-                  }
                 }
 
-                // (<>) Month Next Button
                 Button {
                   text: "›"
-                  fontSize: 16
+                  fontSize: Style.font.heading
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
-                  onClicked: {
-                    if (root.convMode === 0) {
-                      root.convGMonth = root.convGMonth < 12 ? root.convGMonth + 1 : 1
-                    } else {
-                      root.convEMonth = root.convEMonth < 13 ? root.convEMonth + 1 : 1
-                      if (root.convEMonth === 13 && root.convEDay > 6) root.convEDay = 5
-                    }
-                  }
+                  onClicked: root.addConvMonths(1)
                 }
+              }
+
+              Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: root.convMode === 0 ? (Model.gregorianMonths[root.convGMonth - 1] + " (ወር " + root.convGMonth + "/12)") : (Model.amharicMonths[root.convEMonth - 1] + " · " + Model.amharicMonthsEn[root.convEMonth - 1] + " (" + root.convEMonth + "/13)")
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                color: root.dim
+                textFormat: Text.PlainText
               }
             }
           }
@@ -948,7 +992,7 @@ Panel {
           // ---- Day Input Card
           Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: Style.space(86)
+            Layout.fillHeight: true
             radius: Style.cornerRadius
             color: root.cardBg
             border.color: dayInput.activeFocus ? root.accent : root.cardBorder
@@ -957,12 +1001,13 @@ Panel {
             ColumnLayout {
               anchors.fill: parent
               anchors.margins: Style.space(8)
-              spacing: Style.space(4)
+              spacing: Style.space(2)
 
               Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: root.convMode === 0 ? "Day / ቀን (1–31)" : ("ቀን / Day (1–" + ((root.convEMonth === 13) ? (root.convEYear % 4 === 3 ? "6" : "5") : "30") + ")")
-                font.pixelSize: 8
+                text: root.convMode === 0 ? "Gregorian Day (ቀን)" : "የኢትዮጵያ ቀን (Day)"
+                font.pixelSize: Style.font.caption
+                font.bold: true
                 color: root.dim
                 textFormat: Text.PlainText
               }
@@ -973,25 +1018,18 @@ Panel {
 
                 Button {
                   text: "−"
-                  fontSize: 14
+                  fontSize: Style.font.heading
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
-                  onClicked: {
-                    if (root.convMode === 0) {
-                      root.convGDay = root.convGDay > 1 ? root.convGDay - 1 : 31
-                    } else {
-                      var maxD = (root.convEMonth === 13) ? (root.convEYear % 4 === 3 ? 6 : 5) : 30
-                      root.convEDay = root.convEDay > 1 ? root.convEDay - 1 : maxD
-                    }
-                  }
+                  onClicked: root.addConvDays(-1)
                 }
 
                 TextInput {
                   id: dayInput
                   Layout.fillWidth: true
                   text: String(root.convMode === 0 ? root.convGDay : root.convEDay)
-                  font.pixelSize: 18
+                  font.pixelSize: Style.font.display
                   font.bold: true
                   color: root.foreground
                   horizontalAlignment: TextInput.AlignHCenter
@@ -1012,65 +1050,51 @@ Panel {
 
                 Button {
                   text: "+"
-                  fontSize: 14
+                  fontSize: Style.font.heading
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
-                  onClicked: {
-                    if (root.convMode === 0) {
-                      root.convGDay = root.convGDay < 31 ? root.convGDay + 1 : 1
-                    } else {
-                      var maxD = (root.convEMonth === 13) ? (root.convEYear % 4 === 3 ? 6 : 5) : 30
-                      root.convEDay = root.convEDay < maxD ? root.convEDay + 1 : 1
-                    }
-                  }
+                  onClicked: root.addConvDays(1)
                 }
+              }
+
+              Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: root.convMode === 0 ?
+                      (new Date(root.convGYear, root.convGMonth - 1, root.convGDay).toLocaleDateString(Qt.locale("en_US"), "dddd") + " · Day " + root.convGDay) :
+                      (Model.amharicDays[root.convGregResult.getDay()] + " · " + root.convEDay + " (" + (root.convEMonth === 13 ? (root.convEYear % 4 === 3 ? "ከ 6" : "ከ 5") : "ከ 30") + " ቀናት)")
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                color: root.dim
+                textFormat: Text.PlainText
               }
             }
           }
         }
 
-        // 3. Hero Converted Date Result Card
+        // 3. Hero Converted Date Card (Focused Exclusively on the Converted Day)
         Rectangle {
           Layout.fillWidth: true
           Layout.fillHeight: true
+          Layout.preferredHeight: Style.space(350)
           radius: Style.cornerRadius
           color: root.cardBg
           border.color: root.cardBorder
           border.width: 1
 
           ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: Style.space(16)
-            spacing: Style.space(10)
+            anchors.centerIn: parent
+            width: parent.width - Style.space(48)
+            spacing: Style.space(18)
 
-            // Badge & Action Row
-            RowLayout {
-              Layout.fillWidth: true
-
-              Text {
-                text: root.convMode === 0 ? "🇪🇹 የተለወጠው የኢትዮጵያ ቀን (Ethiopian Date)" : "🌍 Converted Gregorian Date (የፈረንጅ ቀን)"
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                color: root.dim
-                textFormat: Text.PlainText
-                Layout.alignment: Qt.AlignVCenter
-              }
-
-              Item { Layout.fillWidth: true }
-
-              // Copy Button
-              Button {
-                text: "📋 ቅዳ (Copy Date)"
-                fontSize: Style.font.caption
-                foreground: root.foreground
-                accent: root.accent
-                Layout.alignment: Qt.AlignVCenter
-                onClicked: {
-                  if (root.convMode === 0) root.copyConvertedEth()
-                  else root.copyConvertedGreg()
-                }
-              }
+            // Header Tag
+            Text {
+              text: root.convMode === 0 ? "CONVERTED ETHIOPIAN DATE" : "CONVERTED GREGORIAN DATE"
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              color: root.dim
+              textFormat: Text.PlainText
+              Layout.alignment: Qt.AlignHCenter
             }
 
             // Primary Converted Headline
@@ -1078,61 +1102,41 @@ Panel {
               text: root.convMode === 0 ?
                     (Model.amharicDays[root.convEthResult.dayOfWeek] + "፣ " + Model.amharicMonths[root.convEthResult.month - 1] + " " + root.formatNum(root.convEthResult.day) + " ቀን " + root.formatNum(root.convEthResult.year) + " ዓ.ም") :
                     root.convGregResult.toLocaleDateString(Qt.locale("en_US"), "dddd, MMMM d, yyyy")
-              font.pixelSize: 22
+              font.pixelSize: Style.font.displayLarge
               font.bold: true
               color: root.foreground
               textFormat: Text.PlainText
+              horizontalAlignment: Text.AlignHCenter
               wrapMode: Text.WordWrap
               Layout.fillWidth: true
+              Layout.alignment: Qt.AlignHCenter
             }
 
-            // Secondary Badges Row
-            RowLayout {
-              Layout.fillWidth: true
-              spacing: Style.space(12)
-
-              // Saint Badge
-              Text {
-                visible: root.convMode === 0 && Model.getDailySaint(root.convEthResult.day) !== null
-                text: "⛪ " + (Model.getDailySaint(root.convEthResult.day) || "")
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                color: root.accent
-                textFormat: Text.PlainText
-              }
-
-              // Holiday Badge
-              Text {
-                visible: root.convMode === 0 && Model.getHoliday(root.convEthResult.month, root.convEthResult.day, root.convEthResult.year % 4 === 3) !== null
-                text: "🌟 " + (Model.getHoliday(root.convEthResult.month, root.convEthResult.day, root.convEthResult.year % 4 === 3) || "")
-                font.pixelSize: Style.font.caption
-                font.bold: true
-                color: root.urgent
-                textFormat: Text.PlainText
-              }
-
-              // Gregorian ISO Tag
-              Text {
-                visible: root.convMode === 1
-                text: "ISO: " + root.convGregResult.getFullYear() + "-" + ((root.convGregResult.getMonth()+1)<10?"0":"") + (root.convGregResult.getMonth()+1) + "-" + (root.convGregResult.getDate()<10?"0":"") + root.convGregResult.getDate()
-                font.pixelSize: Style.font.caption
-                color: root.dim
-                textFormat: Text.PlainText
-              }
-
-              // Gregorian Year Span
-              Text {
-                visible: root.convMode === 0
-                text: "(" + (root.convEthResult.year + 7) + "–" + (root.convEthResult.year + 8) + ")"
-                font.pixelSize: Style.font.caption
-                color: root.dim
-                textFormat: Text.PlainText
-              }
-
-              Item { Layout.fillWidth: true }
+            // Secondary Subtitle
+            Text {
+              text: root.convMode === 0 ?
+                    (root.convGregResult.toLocaleDateString(Qt.locale("en_US"), "dddd, MMMM d, yyyy") + " G.C.") :
+                    (Model.amharicDays[root.convGregResult.getDay()] + "፣ " + Model.amharicMonths[root.convEMonth - 1] + " " + root.convEDay + " ቀን " + root.convEYear + " ዓ.ም")
+              font.pixelSize: Style.font.body
+              font.bold: true
+              color: root.dim
+              textFormat: Text.PlainText
+              horizontalAlignment: Text.AlignHCenter
+              Layout.alignment: Qt.AlignHCenter
             }
 
-            Item { Layout.fillHeight: true }
+            // Copy Action Button
+            Button {
+              text: "ቅዳ (Copy Date)"
+              fontSize: Style.font.caption
+              foreground: root.foreground
+              accent: root.accent
+              Layout.alignment: Qt.AlignHCenter
+              onClicked: {
+                if (root.convMode === 0) root.copyConvertedEth()
+                else root.copyConvertedGreg()
+              }
+            }
           }
         }
       }
@@ -1163,13 +1167,13 @@ Panel {
               text: "🔤 የአማርኛ ፊደላት (Amharic Fidel Chart — 33 × 7)"
               font.pixelSize: Style.font.body
               font.bold: true
-              color: root.accent
+              color: root.foreground
               textFormat: Text.PlainText
             }
             Item { Layout.fillWidth: true }
             Text {
               text: "💡 Click any letter to copy"
-              font.pixelSize: 9
+              font.pixelSize: Style.font.caption
               color: root.dim
               textFormat: Text.PlainText
             }
@@ -1225,7 +1229,7 @@ Panel {
                               Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: leftFamRowTab.fam.row[index]
-                                font.pixelSize: 13
+                                font.pixelSize: Style.font.subtitle
                                 font.bold: true
                                 color: root.foreground
                                 textFormat: Text.PlainText
@@ -1233,7 +1237,7 @@ Panel {
                               Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: leftFamRowTab.fam.sounds[index]
-                                font.pixelSize: 9
+                                font.pixelSize: Style.font.caption
                                 color: root.dim
                                 textFormat: Text.PlainText
                               }
@@ -1291,7 +1295,7 @@ Panel {
                               Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: rightFamRowTab.fam.row[index]
-                                font.pixelSize: 13
+                                font.pixelSize: Style.font.subtitle
                                 font.bold: true
                                 color: root.foreground
                                 textFormat: Text.PlainText
@@ -1299,7 +1303,7 @@ Panel {
                               Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: rightFamRowTab.fam.sounds[index]
-                                font.pixelSize: 9
+                                font.pixelSize: Style.font.caption
                                 color: root.dim
                                 textFormat: Text.PlainText
                               }
@@ -1332,9 +1336,9 @@ Panel {
                 // Diphthongs
                 Text {
                   text: "ዲቃላ ፊደላት (Labialized Diphthongs)"
-                  font.pixelSize: 11
+                  font.pixelSize: Style.font.caption
                   font.bold: true
-                  color: root.accent
+                  color: root.foreground
                   textFormat: Text.PlainText
                   Layout.topMargin: Style.space(2)
                 }
@@ -1347,16 +1351,14 @@ Panel {
                       width: Style.space(48)
                       height: Style.space(28)
                       radius: Style.space(3)
-                      color: diphMouse.containsMouse ? root.activeBg : root.faint
-                      border.color: root.cardBorder
-                      border.width: 1
+                      color: diphMouse.containsMouse ? root.activeBg : "transparent"
                       Column {
                         anchors.centerIn: parent
                         spacing: 0
                         Text {
                           anchors.horizontalCenter: parent.horizontalCenter
                           text: modelData.char
-                          font.pixelSize: 12
+                          font.pixelSize: Style.font.body
                           font.bold: true
                           color: root.foreground
                           textFormat: Text.PlainText
@@ -1364,7 +1366,7 @@ Panel {
                         Text {
                           anchors.horizontalCenter: parent.horizontalCenter
                           text: modelData.sound
-                          font.pixelSize: 8
+                          font.pixelSize: Style.font.caption
                           color: root.dim
                           textFormat: Text.PlainText
                         }
@@ -1386,9 +1388,9 @@ Panel {
                 // Numerals
                 Text {
                   text: "ቁጥሮች (Ge'ez Numerals)"
-                  font.pixelSize: 11
+                  font.pixelSize: Style.font.caption
                   font.bold: true
-                  color: root.accent
+                  color: root.foreground
                   textFormat: Text.PlainText
                   Layout.topMargin: Style.space(4)
                 }
@@ -1401,16 +1403,14 @@ Panel {
                       width: Style.space(48)
                       height: Style.space(28)
                       radius: Style.space(3)
-                      color: numGeezMouse.containsMouse ? root.activeBg : root.faint
-                      border.color: root.cardBorder
-                      border.width: 1
+                      color: numGeezMouse.containsMouse ? root.activeBg : "transparent"
                       Column {
                         anchors.centerIn: parent
                         spacing: 0
                         Text {
                           anchors.horizontalCenter: parent.horizontalCenter
                           text: modelData.char
-                          font.pixelSize: 13
+                          font.pixelSize: Style.font.subtitle
                           font.bold: true
                           color: root.foreground
                           textFormat: Text.PlainText
@@ -1418,9 +1418,9 @@ Panel {
                         Text {
                           anchors.horizontalCenter: parent.horizontalCenter
                           text: modelData.val
-                          font.pixelSize: 8
+                          font.pixelSize: Style.font.caption
                           font.bold: true
-                          color: root.accent
+                          color: root.dim
                           textFormat: Text.PlainText
                         }
                       }
