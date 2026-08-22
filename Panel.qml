@@ -379,12 +379,13 @@ Panel {
             model: 12
             delegate: Rectangle {
               id: monthCard
+              readonly property int mIndex: index + 1
               readonly property var mData: root.yearMonths[index]
               Layout.fillWidth: true
               Layout.preferredHeight: Style.space(126)
               radius: Style.space(5)
               color: root.cardBg
-              border.color: (root.isCurrentYear && root.ethDate.month === (index + 1)) ? root.accent : root.cardBorder
+              border.color: (root.isCurrentYear && root.ethDate.month === monthCard.mIndex) ? root.accent : root.cardBorder
               border.width: 1
 
               ColumnLayout {
@@ -396,10 +397,10 @@ Panel {
                 RowLayout {
                   Layout.fillWidth: true
                   Text {
-                    text: monthCard.mData ? (root.formatNum(index + 1) + ". " + monthCard.mData.nameAm) : ""
+                    text: monthCard.mData ? (root.formatNum(monthCard.mIndex) + ". " + monthCard.mData.nameAm) : ""
                     font.pixelSize: Style.font.body
                     font.bold: true
-                    color: (root.isCurrentYear && root.ethDate.month === (index + 1)) ? root.accent : root.foreground
+                    color: (root.isCurrentYear && root.ethDate.month === monthCard.mIndex) ? root.accent : root.foreground
                     textFormat: Text.PlainText
                   }
                   Item { Layout.fillWidth: true }
@@ -452,9 +453,9 @@ Panel {
                       Layout.fillWidth: true
                       Layout.preferredHeight: Style.space(14)
                       radius: Style.space(3)
-                      readonly property bool isToday: root.isCurrentYear && (root.ethDate.month === (index + 1)) && (modelData === root.ethDate.day)
-                      readonly property bool isHoliday: Model.getHoliday(index + 1, modelData, root.viewYear % 4 === 3) !== null
-                      readonly property bool isSelected: (root.selectedMonth === (index + 1)) && (root.selectedDay === modelData)
+                      readonly property bool isToday: root.isCurrentYear && (root.ethDate.month === monthCard.mIndex) && (modelData === root.ethDate.day)
+                      readonly property bool isHoliday: Model.getHoliday(monthCard.mIndex, modelData, root.viewYear % 4 === 3) !== null
+                      readonly property bool isSelected: (root.selectedMonth === monthCard.mIndex) && (root.selectedDay === modelData)
                       color: isToday ? root.activeBg : (isSelected ? root.hoverBg : (dMouse.containsMouse ? root.faint : "transparent"))
                       border.color: isToday ? root.accent : (isSelected ? root.cardBorder : "transparent")
                       border.width: (isToday || isSelected) ? 1 : 0
@@ -472,11 +473,11 @@ Panel {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                          root.selectedMonth = index + 1
+                          root.selectedMonth = monthCard.mIndex
                           root.selectedDay = modelData
                         }
                         onDoubleClicked: {
-                          root.selectedMonth = index + 1
+                          root.selectedMonth = monthCard.mIndex
                           root.selectedDay = modelData
                           root.copySelectedDate()
                         }
