@@ -591,7 +591,31 @@ Panel {
                   }
                 }
               }
+
               Item { Layout.fillHeight: true }
+
+              // Pagume Cultural / Leap Year Indicator
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: Style.space(24)
+                radius: Style.space(3)
+                color: root.faint
+
+                RowLayout {
+                  anchors.fill: parent
+                  anchors.leftMargin: Style.space(6)
+                  anchors.rightMargin: Style.space(6)
+
+                  Text {
+                    text: (root.viewYear % 4 === 3) ? "✨ ዘመነ ዮሐንስ (Leap · 6 Days)" : "✨ የ13 ወራት ፀጋ (5 Days)"
+                    font.pixelSize: Style.font.caption
+                    font.bold: true
+                    color: root.dim
+                    textFormat: Text.PlainText
+                    Layout.alignment: Qt.AlignCenter
+                  }
+                }
+              }
             }
           }
 

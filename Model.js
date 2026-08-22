@@ -14,6 +14,10 @@ const amharicDays = [
   "እሑድ", "ሰኞ", "ማክሰኞ", "ረቡዕ", "ሐሙስ", "ዓርብ", "ቅዳሜ"
 ];
 
+const amharicDaysShort = [
+  "እ", "ሰ", "ማ", "ረ", "ሐ", "ዓ", "ቅ"
+];
+
 const amharicDaysEn = [
   "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 ];
