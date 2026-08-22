@@ -685,16 +685,18 @@ Panel {
                 Layout.fillHeight: true
                 spacing: Style.space(3)
 
-                // Title bar with Previous/Next icon navigation
+                // Title bar with Previous/Next icon navigation (Pinned to top)
                 RowLayout {
                   Layout.fillWidth: true
+                  Layout.preferredHeight: Style.space(22)
+                  Layout.alignment: Qt.AlignTop
                   spacing: Style.space(4)
 
                   Text {
                     text: "💡 Did You Know?"
-                    font.pixelSize: 11
+                    font.pixelSize: Style.font.body
                     font.bold: true
-                    color: root.accent
+                    color: root.foreground
                     textFormat: Text.PlainText
                     Layout.alignment: Qt.AlignVCenter
                   }
@@ -708,7 +710,7 @@ Panel {
 
                     Button {
                       text: "‹"
-                      fontSize: 16
+                      fontSize: Style.font.heading
                       foreground: root.foreground
                       accent: root.accent
                       Layout.alignment: Qt.AlignVCenter
@@ -717,7 +719,7 @@ Panel {
 
                     Text {
                       text: (root.factIndex + 1) + "/" + Model.ethiopianFacts.length
-                      font.pixelSize: 8
+                      font.pixelSize: Style.font.caption
                       font.bold: true
                       color: root.dim
                       textFormat: Text.PlainText
@@ -726,7 +728,7 @@ Panel {
 
                     Button {
                       text: "›"
-                      fontSize: 16
+                      fontSize: Style.font.heading
                       foreground: root.foreground
                       accent: root.accent
                       Layout.alignment: Qt.AlignVCenter
@@ -737,20 +739,23 @@ Panel {
 
                 Text {
                   text: Model.ethiopianFacts[root.factIndex].descEn
-                  font.pixelSize: 10
+                  font.pixelSize: Style.font.caption
                   color: root.foreground
                   textFormat: Text.PlainText
                   wrapMode: Text.WordWrap
                   Layout.fillWidth: true
                 }
+
                 Text {
                   text: Model.ethiopianFacts[root.factIndex].descAm
-                  font.pixelSize: 9
+                  font.pixelSize: Style.font.caption
                   color: root.dim
                   textFormat: Text.PlainText
                   wrapMode: Text.WordWrap
                   Layout.fillWidth: true
                 }
+
+                Item { Layout.fillHeight: true }
               }
             }
           }
