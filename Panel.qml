@@ -274,8 +274,8 @@ Panel {
     open: root.opened
     centerOnBar: false
     focusTarget: keyHandler
-    contentWidth: panel.fittedContentWidth(root.currentTab === 0 ? Style.space(508) : Style.space(780))
-    contentHeight: panel.fittedContentHeight(root.currentTab === 0 ? Style.space(485) : Style.space(564))
+    contentWidth: panel.fittedContentWidth(Style.space(540))
+    contentHeight: panel.fittedContentHeight(Style.space(520))
 
     Item {
       id: keyHandler
@@ -329,7 +329,9 @@ Panel {
       // =====================================================================
       RowLayout {
         Layout.fillWidth: true
+        Layout.fillHeight: false
         Layout.preferredHeight: Style.space(34)
+        Layout.maximumHeight: Style.space(34)
         implicitHeight: Style.space(34)
         spacing: Style.space(8)
 
@@ -403,14 +405,13 @@ Panel {
         visible: root.currentTab === 0
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.preferredHeight: Style.space(443)
-        implicitHeight: Style.space(443)
         spacing: Style.space(8)
 
         // Single-Month Calendar Card
         Rectangle {
           id: singleMonthCard
           Layout.fillWidth: true
+          Layout.fillHeight: false
           Layout.preferredHeight: Style.space(324)
           radius: Style.space(6)
           color: root.cardBg
@@ -438,6 +439,8 @@ Panel {
               Button {
                 text: "«"
                 fontSize: Style.font.heading
+                horizontalPadding: Style.space(6)
+                verticalPadding: Style.space(2)
                 foreground: root.foreground
                 accent: root.accent
                 Layout.alignment: Qt.AlignVCenter
@@ -447,6 +450,8 @@ Panel {
               Button {
                 text: "‹"
                 fontSize: Style.font.heading
+                horizontalPadding: Style.space(6)
+                verticalPadding: Style.space(2)
                 foreground: root.foreground
                 accent: root.accent
                 Layout.alignment: Qt.AlignVCenter
@@ -455,10 +460,13 @@ Panel {
 
               ColumnLayout {
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 spacing: 0
 
                 Text {
-                  Layout.alignment: Qt.AlignHCenter
+                  Layout.fillWidth: true
+                  horizontalAlignment: Text.AlignHCenter
+                  elide: Text.ElideRight
                   text: (root.currentMonthData ? root.currentMonthData.nameAm : "") + " " + root.formatNum(root.viewYear) + " ዓ.ም"
                   font.pixelSize: Style.font.heading
                   font.bold: true
@@ -481,6 +489,8 @@ Panel {
                 visible: !root.isCurrentMonth
                 text: "ዛሬ"
                 fontSize: Style.font.caption
+                horizontalPadding: Style.space(6)
+                verticalPadding: Style.space(2)
                 foreground: root.foreground
                 accent: root.accent
                 Layout.alignment: Qt.AlignVCenter
@@ -490,6 +500,8 @@ Panel {
               Button {
                 text: "›"
                 fontSize: Style.font.heading
+                horizontalPadding: Style.space(6)
+                verticalPadding: Style.space(2)
                 foreground: root.foreground
                 accent: root.accent
                 Layout.alignment: Qt.AlignVCenter
@@ -499,6 +511,8 @@ Panel {
               Button {
                 text: "»"
                 fontSize: Style.font.heading
+                horizontalPadding: Style.space(6)
+                verticalPadding: Style.space(2)
                 foreground: root.foreground
                 accent: root.accent
                 Layout.alignment: Qt.AlignVCenter
@@ -798,54 +812,60 @@ Panel {
         visible: root.currentTab === 1
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.preferredHeight: Style.space(522)
-        implicitHeight: Style.space(522)
-        spacing: Style.space(12)
+        spacing: Style.space(10)
 
         // 1. Direction Switcher & Today Shortcut
-        Item {
+        RowLayout {
           Layout.fillWidth: true
+          Layout.fillHeight: false
           Layout.preferredHeight: Style.space(34)
+          Layout.maximumHeight: Style.space(34)
+          spacing: Style.spacing.xs
 
-          Row {
-            anchors.centerIn: parent
-            spacing: Style.spacing.xs
+          Item { Layout.fillWidth: true }
 
-            Button {
-              text: root.convMode === 0 ? "Gregorian" : "Ethiopian"
-              selected: true
-              fontSize: Style.font.caption
-              foreground: root.foreground
-              accent: root.accent
-              onClicked: root.toggleConvMode()
-            }
-
-            Button {
-              text: "⇄"
-              fontSize: Style.font.title
-              foreground: root.foreground
-              accent: root.accent
-              onClicked: root.toggleConvMode()
-            }
-
-            Button {
-              text: root.convMode === 0 ? "Ethiopian" : "Gregorian"
-              selected: false
-              fontSize: Style.font.caption
-              foreground: root.foreground
-              accent: root.accent
-              onClicked: root.toggleConvMode()
-            }
+          Button {
+            text: root.convMode === 0 ? "Gregorian" : "Ethiopian"
+            selected: true
+            fontSize: Style.font.caption
+            horizontalPadding: Style.space(10)
+            foreground: root.foreground
+            accent: root.accent
+            Layout.alignment: Qt.AlignVCenter
+            onClicked: root.toggleConvMode()
           }
 
           Button {
-            id: todayBtn
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: "ዛሬ (Today)"
-            fontSize: Style.font.caption
+            text: "⇄"
+            fontSize: Style.font.body
+            horizontalPadding: Style.space(8)
             foreground: root.foreground
             accent: root.accent
+            Layout.alignment: Qt.AlignVCenter
+            onClicked: root.toggleConvMode()
+          }
+
+          Button {
+            text: root.convMode === 0 ? "Ethiopian" : "Gregorian"
+            selected: false
+            fontSize: Style.font.caption
+            horizontalPadding: Style.space(10)
+            foreground: root.foreground
+            accent: root.accent
+            Layout.alignment: Qt.AlignVCenter
+            onClicked: root.toggleConvMode()
+          }
+
+          Item { Layout.fillWidth: true }
+
+          Button {
+            id: todayBtn
+            text: "ዛሬ"
+            fontSize: Style.font.caption
+            horizontalPadding: Style.space(8)
+            foreground: root.foreground
+            accent: root.accent
+            Layout.alignment: Qt.AlignVCenter
             onClicked: {
               root.refresh()
               root.convGYear = root.currentDate.getFullYear()
@@ -861,13 +881,18 @@ Panel {
         // 2. Interactive Typable Stepper Input Cards
         RowLayout {
           Layout.fillWidth: true
-          Layout.preferredHeight: Style.space(110)
+          Layout.fillHeight: false
+          Layout.preferredHeight: Style.space(96)
+          Layout.maximumHeight: Style.space(96)
           spacing: Style.space(8)
 
           // ---- Year Input Card
           Rectangle {
             Layout.fillWidth: true
+            Layout.preferredWidth: 120
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
+            clip: true
             radius: Style.cornerRadius
             color: root.cardBg
             border.color: yearInput.activeFocus ? root.accent : root.cardBorder
@@ -875,12 +900,14 @@ Panel {
 
             ColumnLayout {
               anchors.fill: parent
-              anchors.margins: Style.space(8)
-              spacing: Style.space(2)
+              anchors.margins: Style.space(6)
+              spacing: Style.space(4)
 
               Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: root.convMode === 0 ? "Gregorian Year (ዓመት)" : "የኢትዮጵያ ዓመት (Year)"
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                text: root.convMode === 0 ? "Year (ዓመት)" : "ዓመት (Year)"
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 color: root.dim
@@ -889,11 +916,14 @@ Panel {
 
               RowLayout {
                 Layout.fillWidth: true
-                spacing: Style.space(4)
+                Layout.fillHeight: true
+                spacing: Style.space(2)
 
                 Button {
                   text: "−"
-                  fontSize: Style.font.heading
+                  fontSize: Style.font.body
+                  horizontalPadding: Style.space(6)
+                  verticalPadding: Style.space(2)
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
@@ -903,8 +933,10 @@ Panel {
                 TextInput {
                   id: yearInput
                   Layout.fillWidth: true
+                  Layout.minimumWidth: 0
+                  clip: true
                   text: String(root.convMode === 0 ? root.convGYear : root.convEYear)
-                  font.pixelSize: Style.font.display
+                  font.pixelSize: Style.font.heading
                   font.bold: true
                   color: root.foreground
                   horizontalAlignment: TextInput.AlignHCenter
@@ -922,7 +954,9 @@ Panel {
 
                 Button {
                   text: "+"
-                  fontSize: Style.font.heading
+                  fontSize: Style.font.body
+                  horizontalPadding: Style.space(6)
+                  verticalPadding: Style.space(2)
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
@@ -931,7 +965,9 @@ Panel {
               }
 
               Text {
-                Layout.alignment: Qt.AlignHCenter
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
                 text: root.convMode === 0 ? "እ.ኤ.አ (G.C.)" : (Model.toAmharicNumeral(root.convEYear) + " ዓ.ም")
                 font.pixelSize: Style.font.caption
                 font.bold: true
@@ -944,7 +980,10 @@ Panel {
           // ---- Month Input Card
           Rectangle {
             Layout.fillWidth: true
+            Layout.preferredWidth: 100
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
+            clip: true
             radius: Style.cornerRadius
             color: root.cardBg
             border.color: monthInput.activeFocus ? root.accent : root.cardBorder
@@ -952,12 +991,14 @@ Panel {
 
             ColumnLayout {
               anchors.fill: parent
-              anchors.margins: Style.space(8)
-              spacing: Style.space(2)
+              anchors.margins: Style.space(6)
+              spacing: Style.space(4)
 
               Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: root.convMode === 0 ? "Gregorian Month (ወር)" : "የኢትዮጵያ ወር (Month)"
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                text: root.convMode === 0 ? "Month (ወር)" : "ወር (Month)"
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 color: root.dim
@@ -966,11 +1007,14 @@ Panel {
 
               RowLayout {
                 Layout.fillWidth: true
-                spacing: Style.space(4)
+                Layout.fillHeight: true
+                spacing: Style.space(2)
 
                 Button {
                   text: "‹"
-                  fontSize: Style.font.heading
+                  fontSize: Style.font.body
+                  horizontalPadding: Style.space(6)
+                  verticalPadding: Style.space(2)
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
@@ -980,8 +1024,10 @@ Panel {
                 TextInput {
                   id: monthInput
                   Layout.fillWidth: true
+                  Layout.minimumWidth: 0
+                  clip: true
                   text: String(root.convMode === 0 ? root.convGMonth : root.convEMonth)
-                  font.pixelSize: Style.font.display
+                  font.pixelSize: Style.font.heading
                   font.bold: true
                   color: root.foreground
                   horizontalAlignment: TextInput.AlignHCenter
@@ -1003,7 +1049,9 @@ Panel {
 
                 Button {
                   text: "›"
-                  fontSize: Style.font.heading
+                  fontSize: Style.font.body
+                  horizontalPadding: Style.space(6)
+                  verticalPadding: Style.space(2)
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
@@ -1012,8 +1060,10 @@ Panel {
               }
 
               Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: root.convMode === 0 ? (Model.gregorianMonths[root.convGMonth - 1] + " (ወር " + root.convGMonth + "/12)") : (Model.amharicMonths[root.convEMonth - 1] + " · " + Model.amharicMonthsEn[root.convEMonth - 1] + " (" + root.convEMonth + "/13)")
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                text: root.convMode === 0 ? (Model.gregorianMonths[root.convGMonth - 1] + " (" + root.convGMonth + "/12)") : (Model.amharicMonths[root.convEMonth - 1] + " (" + root.convEMonth + "/13)")
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 color: root.dim
@@ -1025,7 +1075,10 @@ Panel {
           // ---- Day Input Card
           Rectangle {
             Layout.fillWidth: true
+            Layout.preferredWidth: 100
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
+            clip: true
             radius: Style.cornerRadius
             color: root.cardBg
             border.color: dayInput.activeFocus ? root.accent : root.cardBorder
@@ -1033,12 +1086,14 @@ Panel {
 
             ColumnLayout {
               anchors.fill: parent
-              anchors.margins: Style.space(8)
-              spacing: Style.space(2)
+              anchors.margins: Style.space(6)
+              spacing: Style.space(4)
 
               Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: root.convMode === 0 ? "Gregorian Day (ቀን)" : "የኢትዮጵያ ቀን (Day)"
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                text: root.convMode === 0 ? "Day (ቀን)" : "ቀን (Day)"
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 color: root.dim
@@ -1047,11 +1102,14 @@ Panel {
 
               RowLayout {
                 Layout.fillWidth: true
-                spacing: Style.space(4)
+                Layout.fillHeight: true
+                spacing: Style.space(2)
 
                 Button {
                   text: "−"
-                  fontSize: Style.font.heading
+                  fontSize: Style.font.body
+                  horizontalPadding: Style.space(6)
+                  verticalPadding: Style.space(2)
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
@@ -1061,8 +1119,10 @@ Panel {
                 TextInput {
                   id: dayInput
                   Layout.fillWidth: true
+                  Layout.minimumWidth: 0
+                  clip: true
                   text: String(root.convMode === 0 ? root.convGDay : root.convEDay)
-                  font.pixelSize: Style.font.display
+                  font.pixelSize: Style.font.heading
                   font.bold: true
                   color: root.foreground
                   horizontalAlignment: TextInput.AlignHCenter
@@ -1083,7 +1143,9 @@ Panel {
 
                 Button {
                   text: "+"
-                  fontSize: Style.font.heading
+                  fontSize: Style.font.body
+                  horizontalPadding: Style.space(6)
+                  verticalPadding: Style.space(2)
                   foreground: root.foreground
                   accent: root.accent
                   Layout.alignment: Qt.AlignVCenter
@@ -1092,10 +1154,12 @@ Panel {
               }
 
               Text {
-                Layout.alignment: Qt.AlignHCenter
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
                 text: root.convMode === 0 ?
-                      (new Date(root.convGYear, root.convGMonth - 1, root.convGDay).toLocaleDateString(Qt.locale("en_US"), "dddd") + " · Day " + root.convGDay) :
-                      (Model.amharicDays[root.convGregResult.getDay()] + " · " + root.convEDay + " (" + (root.convEMonth === 13 ? (root.convEYear % 4 === 3 ? "ከ 6" : "ከ 5") : "ከ 30") + " ቀናት)")
+                      new Date(root.convGYear, root.convGMonth - 1, root.convGDay).toLocaleDateString(Qt.locale("en_US"), "dddd") :
+                      (Model.amharicDays[root.convGregResult.getDay()] + " · " + root.convEDay + "/" + (root.convEMonth === 13 ? (root.convEYear % 4 === 3 ? "6" : "5") : "30"))
                 font.pixelSize: Style.font.caption
                 font.bold: true
                 color: root.dim
@@ -1109,16 +1173,19 @@ Panel {
         Rectangle {
           Layout.fillWidth: true
           Layout.fillHeight: true
-          Layout.preferredHeight: Style.space(350)
+          Layout.minimumHeight: Style.space(200)
+          clip: true
           radius: Style.cornerRadius
           color: root.cardBg
           border.color: root.cardBorder
           border.width: 1
 
           ColumnLayout {
-            anchors.centerIn: parent
-            width: parent.width - Style.space(48)
-            spacing: Style.space(18)
+            anchors.fill: parent
+            anchors.margins: Style.space(16)
+            spacing: Style.space(12)
+
+            Item { Layout.fillHeight: true }
 
             // Header Tag
             Text {
@@ -1135,7 +1202,7 @@ Panel {
               text: root.convMode === 0 ?
                     (Model.amharicDays[root.convEthResult.dayOfWeek] + "፣ " + Model.amharicMonths[root.convEthResult.month - 1] + " " + root.formatNum(root.convEthResult.day) + " ቀን " + root.formatNum(root.convEthResult.year) + " ዓ.ም") :
                     root.convGregResult.toLocaleDateString(Qt.locale("en_US"), "dddd, MMMM d, yyyy")
-              font.pixelSize: Style.font.displayLarge
+              font.pixelSize: Style.font.display
               font.bold: true
               color: root.foreground
               textFormat: Text.PlainText
@@ -1148,13 +1215,15 @@ Panel {
             // Secondary Subtitle
             Text {
               text: root.convMode === 0 ?
-                    (root.convGregResult.toLocaleDateString(Qt.locale("en_US"), "dddd, MMMM d, yyyy") + " G.C.") :
+                    (new Date(root.convGYear, root.convGMonth - 1, root.convGDay, 12, 0, 0).toLocaleDateString(Qt.locale("en_US"), "dddd, MMMM d, yyyy") + " G.C.") :
                     (Model.amharicDays[root.convGregResult.getDay()] + "፣ " + Model.amharicMonths[root.convEMonth - 1] + " " + root.convEDay + " ቀን " + root.convEYear + " ዓ.ም")
               font.pixelSize: Style.font.body
               font.bold: true
               color: root.dim
               textFormat: Text.PlainText
               horizontalAlignment: Text.AlignHCenter
+              wrapMode: Text.WordWrap
+              Layout.fillWidth: true
               Layout.alignment: Qt.AlignHCenter
             }
 
@@ -1170,38 +1239,39 @@ Panel {
                 else root.copyConvertedGreg()
               }
             }
+
+            Item { Layout.fillHeight: true }
           }
         }
       }
 
       // =====================================================================
-      // TAB 2: FIDEL VIEW (Two-Column Amharic Alphabet Chart)
+      // TAB 2: FIDEL VIEW (Single-Column Scrollable Amharic Alphabet Chart)
       // =====================================================================
       Rectangle {
         id: fidelTab
         visible: root.currentTab === 2
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.preferredHeight: Style.space(522)
-        implicitHeight: Style.space(522)
-        radius: Style.space(5)
+        radius: Style.space(6)
         color: root.cardBg
         border.color: root.cardBorder
         border.width: 1
 
         ColumnLayout {
           anchors.fill: parent
-          anchors.margins: Style.space(12)
+          anchors.margins: Style.space(10)
           spacing: Style.space(8)
 
           RowLayout {
             Layout.fillWidth: true
             Text {
-              text: "🔤 የአማርኛ ፊደላት (Amharic Fidel Chart — 33 × 7)"
+              text: "🔤 የአማርኛ ፊደላት (33 × 7)"
               font.pixelSize: Style.font.body
               font.bold: true
               color: root.foreground
               textFormat: Text.PlainText
+              elide: Text.ElideRight
             }
             Item { Layout.fillWidth: true }
             Text {
@@ -1213,6 +1283,7 @@ Panel {
           }
 
           QQC.ScrollView {
+            id: fidelScroll
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -1226,130 +1297,59 @@ Panel {
 
               ColumnLayout {
                 id: fidelTabContent
-                width: fidelTab.width - Style.space(32)
+                width: Math.max(0, fidelScroll.availableWidth - Style.space(8))
                 spacing: Style.space(8)
 
-                // Two columns of consonant families (17 + 17)
-                RowLayout {
+                // All 34 Consonant Families (7 vowel orders per row)
+                ColumnLayout {
                   Layout.fillWidth: true
-                  spacing: Style.space(12)
-
-                  // Left Column (families 0–16)
-                  ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.space(2)
-                    Repeater {
-                      model: 17
-                      delegate: RowLayout {
-                        id: leftFamRowTab
-                        readonly property var fam: Model.fidelFamilies[index]
-                        Layout.fillWidth: true
-                        spacing: Style.space(1)
-                        Repeater {
-                          model: 7
-                          delegate: Item {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: Style.space(26)
-                            Rectangle {
-                              anchors.fill: parent
-                              anchors.margins: 1
-                              radius: 3
-                              color: lCharMouseTab.containsMouse ? root.activeBg : "transparent"
+                  spacing: Style.space(2)
+                  Repeater {
+                    model: Model.fidelFamilies.length
+                    delegate: RowLayout {
+                      id: famRowTab
+                      readonly property var fam: Model.fidelFamilies[index]
+                      Layout.fillWidth: true
+                      spacing: Style.space(2)
+                      Repeater {
+                        model: 7
+                        delegate: Item {
+                          Layout.fillWidth: true
+                          Layout.preferredWidth: 1
+                          Layout.preferredHeight: Style.space(32)
+                          Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 1
+                            radius: Style.space(4)
+                            color: charMouseTab.containsMouse ? root.activeBg : "transparent"
+                          }
+                          Column {
+                            anchors.centerIn: parent
+                            spacing: 0
+                            Text {
+                              anchors.horizontalCenter: parent.horizontalCenter
+                              text: famRowTab.fam.row[index]
+                              font.pixelSize: Style.font.subtitle
+                              font.bold: true
+                              color: root.foreground
+                              textFormat: Text.PlainText
                             }
-                            Column {
-                              anchors.centerIn: parent
-                              spacing: 0
-                              Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: leftFamRowTab.fam.row[index]
-                                font.pixelSize: Style.font.subtitle
-                                font.bold: true
-                                color: root.foreground
-                                textFormat: Text.PlainText
-                              }
-                              Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: leftFamRowTab.fam.sounds[index]
-                                font.pixelSize: Style.font.caption
-                                color: root.dim
-                                textFormat: Text.PlainText
-                              }
-                            }
-                            MouseArea {
-                              id: lCharMouseTab
-                              anchors.fill: parent
-                              hoverEnabled: true
-                              cursorShape: Qt.PointingHandCursor
-                              onClicked: {
-                                Quickshell.clipboardText = leftFamRowTab.fam.row[index]
-                                root.notify("ተቀድቷል", leftFamRowTab.fam.row[index] + " (" + leftFamRowTab.fam.sounds[index] + ")")
-                              }
+                            Text {
+                              anchors.horizontalCenter: parent.horizontalCenter
+                              text: famRowTab.fam.sounds[index]
+                              font.pixelSize: Style.font.caption
+                              color: root.dim
+                              textFormat: Text.PlainText
                             }
                           }
-                        }
-                      }
-                    }
-                  }
-
-                  // Vertical Divider
-                  Rectangle {
-                    Layout.preferredWidth: 1
-                    Layout.fillHeight: true
-                    color: root.cardBorder
-                  }
-
-                  // Right Column (families 17–33)
-                  ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.space(2)
-                    Repeater {
-                      model: 17
-                      delegate: RowLayout {
-                        id: rightFamRowTab
-                        readonly property int famIdx: index + 17
-                        readonly property var fam: famIdx < Model.fidelFamilies.length ? Model.fidelFamilies[famIdx] : null
-                        visible: fam !== null
-                        Layout.fillWidth: true
-                        spacing: Style.space(1)
-                        Repeater {
-                          model: rightFamRowTab.fam ? 7 : 0
-                          delegate: Item {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: Style.space(26)
-                            Rectangle {
-                              anchors.fill: parent
-                              anchors.margins: 1
-                              radius: 3
-                              color: rCharMouseTab.containsMouse ? root.activeBg : "transparent"
-                            }
-                            Column {
-                              anchors.centerIn: parent
-                              spacing: 0
-                              Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: rightFamRowTab.fam.row[index]
-                                font.pixelSize: Style.font.subtitle
-                                font.bold: true
-                                color: root.foreground
-                                textFormat: Text.PlainText
-                              }
-                              Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: rightFamRowTab.fam.sounds[index]
-                                font.pixelSize: Style.font.caption
-                                color: root.dim
-                                textFormat: Text.PlainText
-                              }
-                            }
-                            MouseArea {
-                              id: rCharMouseTab
-                              anchors.fill: parent
-                              hoverEnabled: true
-                              cursorShape: Qt.PointingHandCursor
-                              onClicked: {
-                                Quickshell.clipboardText = rightFamRowTab.fam.row[index]
-                                root.notify("ተቀድቷል", rightFamRowTab.fam.row[index] + " (" + rightFamRowTab.fam.sounds[index] + ")")
-                              }
+                          MouseArea {
+                            id: charMouseTab
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                              Quickshell.clipboardText = famRowTab.fam.row[index]
+                              root.notify("ተቀድቷል", famRowTab.fam.row[index] + " (" + famRowTab.fam.sounds[index] + ")")
                             }
                           }
                         }
