@@ -307,23 +307,144 @@ function getEthiopianTime(date) {
     };
 }
 
-function getHoliday(month, day, isLeapYear) {
-    var gennaDay = isLeapYear ? 28 : 29;
-    var timketDay = isLeapYear ? 12 : 11;
-    
-    var holidays = {
+// Confirmed Ethiopian Islamic Affairs Supreme Council (Majlis) moon-sighted
+// Gregorian dates keyed by "hijriYear-hijriMonth-hijriDay". Unlisted years
+// fall back to the tabular Hijri calculation below (+/- 1 day).
+const CONFIRMED_HIJRI_OVERRIDES = {
+    "1447-3-12": [2025, 9, 4],   // Mawlid 2025
+    "1447-10-1": [2026, 3, 20],  // Eid al-Fitr 2026
+    "1447-12-10": [2026, 5, 27], // Eid al-Adha 2026
+    "1448-3-12": [2026, 8, 25]   // Mawlid 2026
+};
+
+var _yearHolidayCache = {};
+
+// Orthodox Easter (Fasika) via Meeus Julian Computus (matches Bahire Hasab)
+function getOrthodoxEasterGregorian(gYear) {
+    var a = gYear % 4;
+    var b = gYear % 7;
+    var c = gYear % 19;
+    var d = (19 * c + 15) % 30;
+    var e = (2 * a + 4 * b - d + 34) % 7;
+    var month = Math.floor((d + e + 114) / 31); // 3=March, 4=April (Julian)
+    var day = ((d + e + 114) % 31) + 1;
+    var julianToGregOffset = Math.floor(gYear / 100) - Math.floor(gYear / 400) - 2;
+    return new Date(gYear, month - 1, day + julianToGregOffset, 12, 0, 0);
+}
+
+// Tabular (Kuwaiti/Civil) Hijri to Gregorian Date
+function hijriToGregorian(hYear, hMonth, hDay) {
+    var jd = Math.floor((11 * hYear + 3) / 30) +
+             354 * hYear +
+             30 * hMonth -
+             Math.floor((hMonth - 1) / 2) +
+             hDay + 1948440 - 385;
+    var l = jd + 68569;
+    var n = Math.floor((4 * l) / 146097);
+    l = l - Math.floor((146097 * n + 3) / 4);
+    var i = Math.floor((4000 * (l + 1)) / 1461001);
+    l = l - Math.floor((1461 * i) / 4) + 31;
+    var j = Math.floor((80 * l) / 2447);
+    var day = l - Math.floor((2447 * j) / 80);
+    l = Math.floor(j / 11);
+    var month = j + 2 - 12 * l;
+    var year = 100 * (n - 49) + i + l;
+    return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+function getYearHolidays(ethYear) {
+    if (_yearHolidayCache[ethYear]) return _yearHolidayCache[ethYear];
+
+    var map = {};
+    function add(month, day, name, type) {
+        var key = month + "-" + day;
+        if (!map[key]) map[key] = [];
+        map[key].push({ name: name, type: type });
+    }
+    function addByGregorian(gDate, name, type) {
+        var eth = getEthiopianDate(gDate);
+        if (eth.year === ethYear) add(eth.month, eth.day, name, type);
+    }
+
+    // 1. Fixed Official Public Holidays (Proclamation No. 1334/2024)
+    // In Zemene Matewos (ethYear % 4 === 0, Meskerem 1 = Sep 12), Genna falls on Tahsas 28 (Jan 7)
+    var gennaDay = (ethYear % 4 === 0) ? 28 : 29;
+    add(1, 1, "እንቁጣጣሽ (አዲስ ዓመት · New Year)", "public");
+    add(1, 17, "መስቀል (Finding of the True Cross)", "public");
+    add(4, gennaDay, "ገና (የልደት በዓል · Christmas)", "public");
+    add(5, 11, "ጥምቀት (Epiphany)", "public");
+    add(6, 23, "የዐድዋ ድል በዓል (Adwa Victory Day)", "public");
+    add(8, 23, "የሠራተኞች ቀን (Labour Day)", "public");
+    add(8, 27, "የአርበኞች ቀን (Patriots' Victory Day)", "public");
+
+    // 2. Movable Orthodox Public Holidays & Major Observances (Bahire Hasab)
+    var easterGregYear = ethYear + 8;
+    var fasikaG = getOrthodoxEasterGregorian(easterGregYear);
+    var sikletG = new Date(fasikaG.getFullYear(), fasikaG.getMonth(), fasikaG.getDate() - 2, 12, 0, 0);
+    var hosannaG = new Date(fasikaG.getFullYear(), fasikaG.getMonth(), fasikaG.getDate() - 7, 12, 0, 0);
+    addByGregorian(sikletG, "ስቅለት (Good Friday)", "public");
+    addByGregorian(fasikaG, "ፋሲካ (Ethiopian Easter)", "public");
+    addByGregorian(hosannaG, "ሆሳዕና (Palm Sunday)", "religious");
+
+    // 3. Movable Islamic Public Holidays (Hijri + Confirmed Majlis Overrides)
+    var startGYear = ethYear + 7;
+    var approxHYear = Math.floor((startGYear - 622) * (33 / 32));
+    var islamicSpecs = [
+        { m: 3, d: 12, name: "መውሊድ (Mawlid · Prophet's Birthday)" },
+        { m: 10, d: 1, name: "ዒድ አል ፈጥር (Eid al-Fitr)" },
+        { m: 12, d: 10, name: "ዒድ አል አድሐ (ዓረፋ · Eid al-Adha)" }
+    ];
+    for (var hy = approxHYear - 1; hy <= approxHYear + 2; hy++) {
+        for (var s = 0; s < islamicSpecs.length; s++) {
+            var spec = islamicSpecs[s];
+            var ov = CONFIRMED_HIJRI_OVERRIDES[hy + "-" + spec.m + "-" + spec.d];
+            var gDate = ov ? new Date(ov[0], ov[1] - 1, ov[2], 12, 0, 0)
+                           : hijriToGregorian(hy, spec.m, spec.d);
+            addByGregorian(gDate, spec.name, "public");
+        }
+    }
+
+    // 4. Cultural & Religious Observances
+    // Irreecha Birraa: first Sunday of October (Hora Harsadi) & Saturday before (Hora Finfinnee)
+    var oct1 = new Date(startGYear, 9, 1, 12, 0, 0);
+    var firstSunDay = 1 + ((7 - oct1.getDay()) % 7);
+    var harsadiG = new Date(startGYear, 9, firstSunDay, 12, 0, 0);
+    var finfinneeG = new Date(startGYear, 9, firstSunDay - 1, 12, 0, 0);
+    addByGregorian(finfinneeG, "ኢሬቻ — ሆራ ፊንፊኔ (Irreecha · Hora Finfinnee)", "cultural");
+    addByGregorian(harsadiG, "ኢሬቻ — ሆራ ሐርሰዲ (Irreecha · Hora Harsadi)", "cultural");
+
+    add(1, 16, "ደመራ (Demera · Meskel Eve)", "religious");
+    add(12, 13, "ደብረ ታቦር (ቡሄ · Buhe)", "religious");
+    add(12, 16, "ዕርገተ ማርያም (ፍልሰታ / አሸንዳ)", "religious");
+
+    _yearHolidayCache[ethYear] = map;
+    return map;
+}
+
+function getHolidaysForDay(ethYear, month, day) {
+    var yearMap = getYearHolidays(ethYear);
+    return yearMap[month + "-" + day] || [];
+}
+
+function getHoliday(month, day, yearOrIsLeap) {
+    if (typeof yearOrIsLeap === "number" && yearOrIsLeap > 100) {
+        var list = getHolidaysForDay(yearOrIsLeap, month, day);
+        if (list.length === 0) return null;
+        return list.map(function(item) { return item.name; }).join(" · ");
+    }
+    var gennaDay = yearOrIsLeap ? 28 : 29;
+    var fallback = {
         "1-1": "እንቁጣጣሽ (አዲስ ዓመት)",
         "1-17": "መስቀል (የደመራ በዓል)",
         ["4-" + gennaDay]: "ገና (የልደት በዓል)",
-        ["5-" + timketDay]: "ጥምቀት (የጥምቀት በዓል)",
+        "5-11": "ጥምቀት (የጥምቀት በዓል)",
         "6-23": "የዐድዋ ድል በዓል",
-        "7-27": "የአርበኞች ቀን",
         "8-23": "የሠራተኞች ቀን",
-        "9-20": "የግንቦት 20 በዓል",
+        "8-27": "የአርበኞች ቀን",
         "12-13": "ደብረ ታቦር (ቡሄ)",
         "12-16": "ዕርገተ ማርያም (ፍልሰታ)"
     };
-    return holidays[month + "-" + day] || null;
+    return fallback[month + "-" + day] || null;
 }
 
 function getDailySaint(day) {

@@ -48,7 +48,7 @@ Panel {
   readonly property var monthWeeks: buildMonthWeeks(viewYear, viewMonth)
   readonly property bool isCurrentYear: viewYear === ethDate.year
   readonly property bool isCurrentMonth: isCurrentYear && viewMonth === ethDate.month
-  readonly property string selectedHoliday: Model.getHoliday(selectedMonth, selectedDay, viewYear % 4 === 3) || ""
+  readonly property var selectedHolidays: Model.getHolidaysForDay(viewYear, selectedMonth, selectedDay)
   readonly property string selectedSaint: Model.getDailySaint(selectedDay) || ""
   readonly property var selectedGregorianDate: Model.ethiopianToGregorian(viewYear, selectedMonth, selectedDay)
 
@@ -626,26 +626,29 @@ Panel {
                       Layout.preferredHeight: Style.space(36)
 
                       Rectangle {
+                        id: dayCard
                         visible: daySlot.modelData > 0
                         anchors.fill: parent
                         radius: Style.space(4)
+                        readonly property var dayEvents: daySlot.modelData > 0 ? Model.getHolidaysForDay(root.viewYear, root.viewMonth, daySlot.modelData) : []
                         readonly property bool isToday: root.isCurrentMonth && (daySlot.modelData === root.ethDate.day)
-                        readonly property bool isHoliday: daySlot.modelData > 0 && Model.getHoliday(root.viewMonth, daySlot.modelData, root.viewYear % 4 === 3) !== null
+                        readonly property bool isPublicHoliday: dayEvents.some(function(e) { return e.type === "public" })
+                        readonly property bool isObservance: !isPublicHoliday && dayEvents.length > 0
                         readonly property bool isSelected: (root.selectedMonth === root.viewMonth) && (root.selectedDay === daySlot.modelData)
                         color: isToday ? root.activeBg : (isSelected ? root.hoverBg : (dMouse.containsMouse ? root.faint : "transparent"))
                         border.color: isToday ? root.accent : (isSelected ? root.cardBorder : "transparent")
                         border.width: (isToday || isSelected) ? 1 : 0
 
-                        // Holiday Indicator Dot
+                        // Holiday / Observance Indicator Dot (urgent = Public Holiday, accent = Cultural/Religious)
                         Rectangle {
-                          visible: parent.isHoliday
+                          visible: dayCard.isPublicHoliday || dayCard.isObservance
                           anchors.top: parent.top
                           anchors.right: parent.right
                           anchors.margins: Style.space(4)
                           width: Style.space(4)
                           height: Style.space(4)
                           radius: width / 2
-                          color: root.urgent
+                          color: dayCard.isPublicHoliday ? root.urgent : root.accent
                         }
 
                         Column {
@@ -656,8 +659,8 @@ Panel {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: daySlot.modelData > 0 ? root.formatNum(daySlot.modelData) : ""
                             font.pixelSize: root.useGeezNumerals ? Style.font.caption : Style.font.body
-                            font.bold: parent.parent.isToday || parent.parent.isHoliday || parent.parent.isSelected
-                            color: parent.parent.isToday ? root.accent : (parent.parent.isHoliday ? root.urgent : root.foreground)
+                            font.bold: dayCard.isToday || dayCard.isPublicHoliday || dayCard.isObservance || dayCard.isSelected
+                            color: dayCard.isToday ? root.accent : (dayCard.isPublicHoliday ? root.urgent : root.foreground)
                             textFormat: Text.PlainText
                           }
 
@@ -665,8 +668,8 @@ Panel {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: daySlot.modelData > 0 ? root.gregorianCellLabel(root.viewYear, root.viewMonth, daySlot.modelData) : ""
                             font.pixelSize: Math.max(8, Style.font.caption - 2)
-                            color: parent.parent.isToday ? root.accent : root.dim
-                            opacity: parent.parent.isToday ? 0.85 : 0.75
+                            color: dayCard.isToday ? root.accent : root.dim
+                            opacity: dayCard.isToday ? 0.85 : 0.75
                             textFormat: Text.PlainText
                           }
                         }
@@ -779,19 +782,22 @@ Panel {
               Layout.fillWidth: true
             }
 
-            Text {
-              visible: root.selectedHoliday !== ""
-              text: "🌟 " + root.selectedHoliday
-              font.pixelSize: Style.font.caption
-              font.bold: true
-              color: root.urgent
-              textFormat: Text.PlainText
-              elide: Text.ElideRight
-              Layout.fillWidth: true
+            Repeater {
+              model: root.selectedHolidays
+              delegate: Text {
+                required property var modelData
+                text: (modelData.type === "public" ? "🌟 " : "✨ ") + modelData.name
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                color: modelData.type === "public" ? root.urgent : root.accent
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+              }
             }
 
             Text {
-              visible: !root.selectedHoliday && !root.selectedSaint
+              visible: root.selectedHolidays.length === 0 && !root.selectedSaint
               text: "መደበኛ ቀን (Regular Day)"
               font.pixelSize: Style.font.caption
               color: root.dim
